@@ -6,6 +6,7 @@ import LRUCache from 'lru-cache';
 
 import bufferStream from './bufferStream.js';
 
+const isHttpsRegistry = process.env.NPM_REGISTRY_HTTPS === 'false' ? false : true;
 const npmRegistryURL =
   process.env.NPM_REGISTRY_URL || 'https://registry.npmjs.org';
 
@@ -25,9 +26,9 @@ const cache = new LRUCache({
 
 const notFound = '';
 
-function get(options, isHttp) {
+function get(options) {
   return new Promise((accept, reject) => {
-    if (isHttp === true) {
+    if (isHttpsRegistry === false) {
       http.get(options, accept).on('error', reject);
     } else {
       https.get(options, accept).on('error', reject);
@@ -61,7 +62,7 @@ async function fetchPackageInfo(packageName, log) {
     }
   };
 
-  const res = await get(options, npmRegistryURL.startsWith('http://') ? true : false);
+  const res = await get(options);
 
   if (res.statusCode === 200) {
     return bufferStream(res).then(JSON.parse);
