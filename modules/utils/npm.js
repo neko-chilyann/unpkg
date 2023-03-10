@@ -1,4 +1,5 @@
 import url from 'url';
+import http from 'http';
 import https from 'https';
 import gunzip from 'gunzip-maybe';
 import LRUCache from 'lru-cache';
@@ -8,7 +9,7 @@ import bufferStream from './bufferStream.js';
 const npmRegistryURL =
   process.env.NPM_REGISTRY_URL || 'https://registry.npmjs.org';
 
-const agent = new https.Agent({
+const agent = new http.Agent({
   keepAlive: true
 });
 
@@ -24,9 +25,13 @@ const cache = new LRUCache({
 
 const notFound = '';
 
-function get(options) {
+function get(options, isHttp) {
   return new Promise((accept, reject) => {
-    https.get(options, accept).on('error', reject);
+    if (isHttp === true) {
+      http.get(options, accept).on('error', reject);
+    } else {
+      https.get(options, accept).on('error', reject);
+    }
   });
 }
 
@@ -56,7 +61,7 @@ async function fetchPackageInfo(packageName, log) {
     }
   };
 
-  const res = await get(options);
+  const res = await get(options, npmRegistryURL.startsWith('http://') ? true : false);
 
   if (res.statusCode === 200) {
     return bufferStream(res).then(JSON.parse);
