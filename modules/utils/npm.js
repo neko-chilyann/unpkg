@@ -6,7 +6,6 @@ import LRUCache from 'lru-cache';
 
 import bufferStream from './bufferStream.js';
 
-const isHttpsRegistry = process.env.NPM_REGISTRY_HTTPS === 'false' ? false : true;
 const npmRegistryURL =
   process.env.NPM_REGISTRY_URL || 'https://registry.npmjs.org';
 
@@ -28,7 +27,7 @@ const notFound = '';
 
 function get(options) {
   return new Promise((accept, reject) => {
-    if (isHttpsRegistry === false) {
+    if (options.protocol && options.protocol === 'http:') {
       http.get(options, accept).on('error', reject);
     } else {
       https.get(options, accept).on('error', reject);
@@ -52,10 +51,12 @@ async function fetchPackageInfo(packageName, log) {
 
   log.debug('Fetching package info for %s from %s', packageName, infoURL);
 
-  const { hostname, pathname } = url.parse(infoURL);
+  const { protocol, hostname, port, pathname } = url.parse(infoURL);
   const options = {
     agent: agent,
-    hostname: hostname,
+    protocol,
+    hostname,
+    port,
     path: pathname,
     headers: {
       Accept: 'application/json'
@@ -179,11 +180,21 @@ export async function getPackage(packageName, version, log) {
 
   log.debug('Fetching package for %s from %s', packageName, tarballURL);
 
-  const { hostname, pathname } = url.parse(tarballURL);
+  const {
+    protocol,
+    hostname,
+    port,
+    pathname
+  } = url.parse(tarballURL);
   const options = {
     agent: agent,
-    hostname: hostname,
-    path: pathname
+    protocol,
+    hostname,
+    port,
+    path: pathname,
+    headers: {
+      Accept: 'application/json'
+    }
   };
 
   const res = await get(options);
